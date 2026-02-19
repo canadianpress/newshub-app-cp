@@ -278,6 +278,7 @@ INSTALLED_APPS = [
     "cp.sidenav",
     "cp.signals",
     "cp.images",
+    "cp.auth",
     "newsroom.auth.saml",
 ]
 
