@@ -1,4 +1,8 @@
-import { Auth0Client, createAuth0Client } from "@auth0/auth0-spa-js";
+import {
+  Auth0Client,
+  createAuth0Client,
+  RedirectLoginOptions,
+} from "@auth0/auth0-spa-js";
 
 let auth0Client: Auth0Client;
 
@@ -25,16 +29,29 @@ async function initAuth0() {
 
 async function handleRedirectCallback() {
   try {
-    await auth0Client.handleRedirectCallback();
+    const result = await auth0Client.handleRedirectCallback();
     window.history.replaceState({}, document.title, window.location.pathname);
+    if (result && result.appState && result.appState.redirectTo)
+      window.open(result.appState.redirectTo, "_blank");
   } catch (err) {
     console.error(err);
   }
 }
 
-async function login(token: string) {
+async function login(
+  loginHint: string | null,
+  token: string | null,
+  appState: RedirectLoginOptions["appState"],
+) {
   try {
-    return await auth0Client.loginWithRedirect({ authorizationParams: { token } });
+    return await auth0Client.loginWithRedirect({
+      authorizationParams: {
+        prompt: "login",
+        ...(loginHint && { login_hint: loginHint }),
+        ...(token && { token }),
+      },
+      appState,
+    });
   } catch (err) {
     console.error(err);
   }
