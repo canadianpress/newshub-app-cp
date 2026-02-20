@@ -52,7 +52,6 @@ services:
             - DEFAULT_TIMEZONE=Europe/Prague
             - SECRET_KEY=newsroom
             - PR_MANAGER_SIDENAV_ENABLED=true
-            - PR_MANAGER_SIDENAV_URL=/pr-manager
 
     client:
         build: client

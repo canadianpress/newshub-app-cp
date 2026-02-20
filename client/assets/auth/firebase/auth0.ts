@@ -8,7 +8,7 @@ async function initAuth0() {
       domain: "",
       clientId: "",
       authorizationParams: {
-        redirect_uri: "http://localhost:5050/sso-redirect",
+        redirect_uri: "http://localhost:5050",
       },
     });
 

@@ -8,9 +8,8 @@ const firebaseStatus = document.getElementById(
   "firebase-status",
 ) as HTMLInputElement;
 
-const sendTokenToServer = (token: string) => {
-  window.location.replace(`/firebase_auth_token?token=${token}`);
-};
+const sendTokenToServer = async (token: string) =>
+  fetch(`/firebase_auth_token?token=${token}`);
 
 form.onsubmit = (event) => {
   event.preventDefault();
@@ -19,25 +18,14 @@ form.onsubmit = (event) => {
   const email = data.get("email") as string;
   const password = data.get("password") as string;
 
-  signInWithEmailAndPassword(auth, email, password).then(
-    (userCredential) => {
-      userCredential.user.getIdToken().then((token) => {
-        auth0Login(token)
-        // .then(
-        //   () => {
-        //     sendTokenToServer(token);
-        //   },
-        //   (err) => {
-        //     console.error(err);
-        //   },
-        // );
-      });
-    },
-    (reason) => {
+  signInWithEmailAndPassword(auth, email, password)
+    .then((userCredential) => userCredential.user.getIdToken())
+    .then((token) => sendTokenToServer(token).then(() => token))
+    .then((token) => auth0Login(token))
+    .catch((reason) => {
       firebaseStatus.value = reason.code;
       form.submit();
-    },
-  );
+    });
 
   return false;
 };
