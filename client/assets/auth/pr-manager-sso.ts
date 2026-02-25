@@ -4,9 +4,14 @@ const handlePrManagerClick = (event: Event) => {
   event.preventDefault();
   const target = event.currentTarget as HTMLAnchorElement;
   const destination = target.href;
-  login(localStorage.getItem("fb_email"), localStorage.getItem("fb_token"), {
-    redirectTo: destination,
-  });
+  fetch("/firebase_credentials")
+    .then((r) => r.json())
+    .then(({ email, token }) =>
+      login(email, token, {
+        redirectTo: destination,
+      }),
+    )
+    .catch(() => login(null, null, { redirectTo: destination }));
 };
 
 const prManagerObserver = new MutationObserver((_, observer) => {

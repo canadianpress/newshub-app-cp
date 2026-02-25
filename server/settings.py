@@ -279,6 +279,7 @@ INSTALLED_APPS = [
     "cp.signals",
     "cp.images",
     "newsroom.auth.saml",
+    "cp.auth"
 ]
 
 WIRE_SUBJECT_SCHEME_WHITELIST = [
