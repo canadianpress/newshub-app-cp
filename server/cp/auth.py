@@ -7,7 +7,7 @@ from firebase_admin import auth
 from firebase_admin import initialize_app as initialize_firebase_app
 from firebase_admin.credentials import Certificate as FirebaseCertificate
 from flask import Response, make_response
-from newsroom.auth.utils import sign_user_by_email
+from newsroom.auth.utils import get_current_request, sign_user_by_email
 from newsroom.flask import flash
 from newsroom.types import AuthProviderType
 from quart_babel import gettext
@@ -19,7 +19,7 @@ from superdesk.flask import url_for
 from werkzeug.http import parse_cookie
 
 CP_SESSION_COOKIE_NAME = "cp_session"
-SESSION_EXPIRY = timedelta(days=14)
+SESSION_EXPIRY = timedelta(days=5)
 
 blueprint = EndpointGroup("cp_auth", __name__)
 logger = getLogger(__name__)
@@ -92,9 +92,7 @@ def get_id_token_from_session(args, params, request: Request):
         logger.error(f"Failed to create token: {e}")
         return {"error": "Invalid session"}, 401
 
-    response = make_response({"token": token.decode("utf-8")})
-    response = _update_cp_session(response, request, session_cookie)
-    return response
+    return {"token": token.decode("utf-8")}, 200
 
 
 def _get_redis() -> Redis:
@@ -158,5 +156,20 @@ def _set_cp_cookie(response: Response, request: Request, session_id: str):
     )
 
 
+def init_refresh_session_hook(app):
+    @app.after_request
+    async def refresh_cp_session(response):
+        request = get_current_request()
+        session_cookie = _get_cp_session_cookie(request)
+        if session_cookie:
+            _update_cp_session(
+                response,
+                request,
+                session_cookie,
+            )
+        return response
+
+
 def init_app(app):
+    init_refresh_session_hook(app)
     get_current_async_app().wsgi.register_endpoint(blueprint)
