@@ -19,7 +19,7 @@ const handlePrManagerClick = (event: Event) => {
         redirectTo: destination,
       }),
     )
-    .catch(console.log);
+    .catch(() => login(null, null, { redirectTo: destination }));
 };
 
 const prManagerObserver = new MutationObserver((_, observer) => {

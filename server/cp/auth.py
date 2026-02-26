@@ -31,14 +31,10 @@ firebase_app = initialize_firebase_app(
 
 @blueprint.endpoint("/firebase_auth_token", auth=False)
 async def firebase_auth_token(args, params, request: Request):
-    session_cookie = _get_cp_session_cookie(request)
     token = request.get_url_arg("token")
     if not token:
         await flash(gettext("User token is not valid"), "danger")
-        response = make_response(request.redirect(url_for("auth.login")))
-        if not session_cookie:
-            response = _start_cp_session(response, request)
-        return response
+        return request.redirect(url_for("auth.login"))
 
     try:
         claims = auth.verify_id_token(
@@ -48,10 +44,7 @@ async def firebase_auth_token(args, params, request: Request):
     except Exception as e:
         logger.error(f"Failed to verify token: {e}")
         await flash(gettext("User token is not valid"), "danger")
-        response = make_response(request.redirect(url_for("auth.login", token_error=1)))
-        if not session_cookie:
-            response = _start_cp_session(response, request)
-        return response
+        return request.redirect(url_for("auth.login", token_error=1))
 
     email = claims["email"]
     uid = claims["uid"]
@@ -60,28 +53,21 @@ async def firebase_auth_token(args, params, request: Request):
             email, auth_type=AuthProviderType.FIREBASE, validate_login_attempt=True
         )
     )
-    if not session_cookie:
-        session_id = str(uuid4())
-        response = _start_cp_session(response, request, session_id)
-    else:
-        session_id = session_cookie
+    session_cookie = _get_cp_session_cookie(request)
+    session_id = session_cookie or str(uuid4())
 
-    response = _update_cp_session(
-        response,
-        request,
-        session_id,
-        {"email": email, "uid": uid},
-    )
+    _update_cp_session(session_id, {"uid": uid})
+    _set_cp_cookie(response, request, session_id)
     return response
 
 
 @blueprint.endpoint("/firebase_credentials")
 def get_id_token_from_session(args, params, request: Request):
-    session_cookie = _get_cp_session_cookie(request)
-    if not session_cookie:
+    session_id = _get_cp_session_cookie(request)
+    if not session_id:
         return {"error": "No session found"}, 401
 
-    session_data = _get_session_data_from_redis(session_cookie)
+    session_data = _get_session_data_from_redis(session_id)
     if not session_data:
         return {"error": "Invalid Session"}, 401
 
@@ -95,53 +81,17 @@ def get_id_token_from_session(args, params, request: Request):
     return {"token": token.decode("utf-8")}, 200
 
 
-def _get_redis() -> Redis:
-    return get_current_async_app().wsgi.redis
-
-
 def _get_cp_session_cookie(request: Request):
     cookie_header = request.get_header("Cookie")
     cookies = parse_cookie(cookie_header)
     return cookies.get(CP_SESSION_COOKIE_NAME)
 
 
-def _start_cp_session(response: Response, request: Request, session_id: str = None):
-    if session_id is None:
-        session_id = str(uuid4())
-    redis = _get_redis()
+def _update_cp_session(session_id: str, data: dict = None):
     key = _get_redis_key(session_id)
-    redis.hset(key, mapping={"created_at": str(datetime.now().timestamp())})
-    redis.expire(key, int(SESSION_EXPIRY.total_seconds()))
-    _set_cp_cookie(response, request, session_id)
-    return response
-
-
-def _update_cp_session(
-    response: Response, request: Request, session_id: str, data: dict = None
-):
-    redis = _get_redis()
-    key = _get_redis_key(session_id)
-    redis.hset(
-        key,
-        mapping={
-            **(data if data else {}),
-            "updated_at": str(datetime.now().timestamp()),
-        },
-    )
-    redis.expire(key, int(SESSION_EXPIRY.total_seconds()))
-    _set_cp_cookie(response, request, session_id)
-    return response
-
-
-def _get_session_data_from_redis(session_id: str):
-    redis = _get_redis()
-    key = _get_redis_key(session_id)
-    value = redis.hgetall(key)
-    return {k.decode("utf-8"): v.decode("utf-8") for k, v in value.items()}
-
-
-def _get_redis_key(session_id: str):
-    return f"cp_session:{session_id}"
+    _get_redis().pipeline().hset(
+        key, mapping={**(data or {}), "updated_at": str(datetime.now().timestamp())}
+    ).expire(key, int(SESSION_EXPIRY.total_seconds())).execute()
 
 
 def _set_cp_cookie(response: Response, request: Request, session_id: str):
@@ -156,17 +106,27 @@ def _set_cp_cookie(response: Response, request: Request, session_id: str):
     )
 
 
+def _get_redis() -> Redis:
+    return get_current_async_app().wsgi.redis
+
+
+def _get_redis_key(session_id: str):
+    return f"cp_session:{session_id}"
+
+
+def _get_session_data_from_redis(session_id: str):
+    value = _get_redis().hgetall(_get_redis_key(session_id))
+    return {k.decode("utf-8"): v.decode("utf-8") for k, v in value.items()}
+
+
 def init_refresh_session_hook(app):
     @app.after_request
     async def refresh_cp_session(response):
         request = get_current_request()
-        session_cookie = _get_cp_session_cookie(request)
-        if session_cookie:
-            _update_cp_session(
-                response,
-                request,
-                session_cookie,
-            )
+        session_id = _get_cp_session_cookie(request)
+        if session_id:
+            _update_cp_session(session_id)
+            _set_cp_cookie(response, request, session_id)
         return response
 
 
