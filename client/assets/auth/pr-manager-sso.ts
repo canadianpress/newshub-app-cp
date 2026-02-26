@@ -1,6 +1,8 @@
 import { signInWithCustomToken } from "firebase/auth";
+import { auth } from "newsroom-core/assets/auth/firebase/init";
 import { login } from "./auth0";
-import { auth } from "./firebase/init";
+
+declare const prManagerEnabled: boolean;
 
 const handlePrManagerClick = (event: Event) => {
   event.preventDefault();
@@ -35,9 +37,11 @@ const prManagerObserver = new MutationObserver((_, observer) => {
 const element = document.querySelector(
   '[data-test-id="sidenav-link-pr_manager"]',
 );
-if (element) element.addEventListener("click", handlePrManagerClick);
-else
+if (element) {
+  element.addEventListener("click", handlePrManagerClick);
+} else if (prManagerEnabled) {
   prManagerObserver.observe(document.body, {
     childList: true,
     subtree: true,
   });
+}

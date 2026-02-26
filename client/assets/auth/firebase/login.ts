@@ -1,5 +1,5 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "./init";
+import { auth } from "newsroom-core/assets/auth/firebase/init";
 
 const form = document.getElementById("formLogin") as HTMLFormElement;
 const firebaseStatus = document.getElementById(

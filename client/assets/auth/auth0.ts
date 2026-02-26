@@ -31,7 +31,7 @@ async function handleRedirectCallback() {
   try {
     const result = await auth0Client.handleRedirectCallback();
     window.history.replaceState({}, document.title, window.location.pathname);
-    if (result && result.appState && result.appState.redirectTo)
+    if (result?.appState?.redirectTo)
       window.open(result.appState.redirectTo, "_blank");
   } catch (err) {
     console.error(err);

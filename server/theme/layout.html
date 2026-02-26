@@ -1,4 +1,3 @@
-{% include "firebase_config.html" %}
 {% extends "base_layout.html" %}
 
 {% block fonts %}
@@ -71,3 +70,8 @@
 {% endif %}
 
 {% endblock %}
+
+{% include "firebase_config.html" %}
+<script>
+    window.prManagerEnabled = {{ config.PR_MANAGER_SIDENAV_ENABLED | safe }};
+</script>
