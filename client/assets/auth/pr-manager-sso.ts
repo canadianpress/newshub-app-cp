@@ -1,6 +1,7 @@
+import { signInWithCustomToken } from "firebase/auth";
 import { login } from "./auth0";
 import { auth } from "./firebase/init";
-import { signInWithCustomToken } from "firebase/auth";
+
 const handlePrManagerClick = (event: Event) => {
   event.preventDefault();
   const target = event.currentTarget as HTMLAnchorElement;

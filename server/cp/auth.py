@@ -86,14 +86,15 @@ def get_id_token_from_session(args, params, request: Request):
         return {"error": "Invalid Session"}, 401
 
     uid = session_data["uid"]
-    email = session_data["email"]
     try:
         token = auth.create_custom_token(uid, app=firebase_app)
     except Exception as e:
         logger.error(f"Failed to create token: {e}")
         return {"error": "Invalid session"}, 401
 
-    return {"email": email, "token": token.decode("utf-8")}, 200
+    response = make_response({"token": token.decode("utf-8")})
+    response = _update_cp_session(response, request, session_cookie)
+    return response
 
 
 def _get_redis() -> Redis:
@@ -118,11 +119,17 @@ def _start_cp_session(response: Response, request: Request, session_id: str = No
 
 
 def _update_cp_session(
-    response: Response, request: Request, session_id: str, data: dict
+    response: Response, request: Request, session_id: str, data: dict = None
 ):
     redis = _get_redis()
     key = _get_redis_key(session_id)
-    redis.hset(key, mapping={**data, "updated_at": str(datetime.now().timestamp())})
+    redis.hset(
+        key,
+        mapping={
+            **(data if data else {}),
+            "updated_at": str(datetime.now().timestamp()),
+        },
+    )
     redis.expire(key, int(SESSION_EXPIRY.total_seconds()))
     _set_cp_cookie(response, request, session_id)
     return response
