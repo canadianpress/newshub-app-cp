@@ -29,10 +29,8 @@ async function initAuth0() {
 
 async function handleRedirectCallback() {
   try {
-    const result = await auth0Client.handleRedirectCallback();
+    await auth0Client.handleRedirectCallback();
     window.history.replaceState({}, document.title, window.location.pathname);
-    if (result?.appState?.redirectTo)
-      window.open(result.appState.redirectTo, "_blank");
   } catch (err) {
     console.error(err);
   }
@@ -41,7 +39,7 @@ async function handleRedirectCallback() {
 async function login(
   loginHint: string | null,
   token: string | null,
-  appState: RedirectLoginOptions["appState"],
+  appState?: RedirectLoginOptions["appState"],
 ) {
   try {
     return await auth0Client.loginWithRedirect({

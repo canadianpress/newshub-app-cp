@@ -1,13 +1,10 @@
 import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "newsroom-core/assets/auth/firebase/init";
+import { getConfig } from "newsroom-core/assets/utils";
 import { login } from "./auth0";
-
-declare const prManagerEnabled: boolean;
 
 const handlePrManagerClick = (event: Event) => {
   event.preventDefault();
-  const target = event.currentTarget as HTMLAnchorElement;
-  const destination = target.href;
   fetch("/firebase_credentials")
     .then((r) => r.json())
     .then(({ token }) => signInWithCustomToken(auth, token))
@@ -16,12 +13,8 @@ const handlePrManagerClick = (event: Event) => {
         .getIdToken()
         .then((token) => ({ email: userCredential.user.email, token })),
     )
-    .then(({ email, token }) =>
-      login(email, token, {
-        redirectTo: destination,
-      }),
-    )
-    .catch(() => login(null, null, { redirectTo: destination }));
+    .then(({ email, token }) => login(email, token))
+    .catch(() => login(null, null));
 };
 
 const prManagerObserver = new MutationObserver((_, observer) => {
@@ -39,7 +32,7 @@ const element = document.querySelector(
 );
 if (element) {
   element.addEventListener("click", handlePrManagerClick);
-} else if (prManagerEnabled) {
+} else if (getConfig("prManagerSidenavEnabled")) {
   prManagerObserver.observe(document.body, {
     childList: true,
     subtree: true,
