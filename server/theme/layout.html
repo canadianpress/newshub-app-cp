@@ -70,3 +70,8 @@
 {% endif %}
 
 {% endblock %}
+
+{% include "firebase_config.html" %}
+<script>
+    window.prManagerEnabled = {{ config.PR_MANAGER_SIDENAV_ENABLED | safe }};
+</script>
