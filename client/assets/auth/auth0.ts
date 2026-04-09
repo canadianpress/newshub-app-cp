@@ -12,7 +12,7 @@ async function initAuth0() {
       domain: "cpe-stage.ca.auth0.com",
       clientId: "TDNfUa1qEqpm51LCFdNI6ryiihYJ40Y9",
       authorizationParams: {
-        redirect_uri: "https://nh-uat.cp.org",
+        redirect_uri: "https://stgadmin.prgloo.com/cp",
       },
     });
 
