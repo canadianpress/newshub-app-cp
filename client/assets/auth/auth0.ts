@@ -9,10 +9,10 @@ let auth0Client: Auth0Client;
 async function initAuth0() {
   try {
     auth0Client = await createAuth0Client({
-      domain: "",
-      clientId: "",
+      domain: "cpe-stage.ca.auth0.com",
+      clientId: "TDNfUa1qEqpm51LCFdNI6ryiihYJ40Y9",
       authorizationParams: {
-        redirect_uri: "",
+        redirect_uri: "https://nh-uat.cp.org",
       },
     });
 
