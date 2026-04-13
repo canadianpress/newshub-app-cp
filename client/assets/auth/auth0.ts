@@ -44,7 +44,6 @@ async function login(
   try {
     return await auth0Client.loginWithRedirect({
       authorizationParams: {
-        prompt: "login",
         ...(loginHint && { login_hint: loginHint }),
         ...(token && { token }),
       },
