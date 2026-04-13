@@ -6,7 +6,7 @@ from uuid import uuid4
 from firebase_admin import auth
 from firebase_admin import initialize_app as initialize_firebase_app
 from firebase_admin.credentials import Certificate as FirebaseCertificate
-from flask import Response, make_response
+from flask import Response
 from newsroom.auth.utils import get_current_request, sign_user_by_email
 from newsroom.flask import flash
 from newsroom.types import AuthProviderType
@@ -25,6 +25,7 @@ REFRESH_THRESHOLD = timedelta(minutes=5)
 blueprint = EndpointGroup("cp_auth", __name__)
 logger = getLogger(__name__)
 logger.setLevel(INFO)
+
 firebase_app = initialize_firebase_app(
     credential=FirebaseCertificate(environ.get("FIREBASE_CONFIG"))
 )
@@ -38,10 +39,7 @@ async def firebase_auth_token(args, params, request: Request):
         return request.redirect(url_for("auth.login", token_error=1))
 
     try:
-        claims = auth.verify_id_token(
-            token,
-            firebase_app,
-        )
+        claims = auth.verify_id_token(token, firebase_app)
     except Exception as e:
         logger.error(f"Failed to verify token: {e}")
         await flash(gettext("User token is not valid"), "danger")
@@ -49,15 +47,21 @@ async def firebase_auth_token(args, params, request: Request):
 
     email = claims["email"]
     uid = claims["uid"]
-    response = make_response(
-        await sign_user_by_email(
-            email, auth_type=AuthProviderType.FIREBASE, validate_login_attempt=True
-        )
+
+    response = await sign_user_by_email(
+        email,
+        auth_type=AuthProviderType.FIREBASE,
+        validate_login_attempt=True,
     )
+
     session_id = _get_cp_session_cookie(request) or str(uuid4())
 
     _update_cp_session(
-        session_id, {"created_at": str(datetime.now().timestamp()), "uid": uid}
+        session_id,
+        {
+            "created_at": str(datetime.now().timestamp()),
+            "uid": uid,
+        },
     )
     _set_cp_cookie(response, request, session_id)
     return response
@@ -127,6 +131,9 @@ def init_refresh_session_hook(app):
             return response
 
         session_data = _get_session_data_from_redis(session_id)
+        if not session_data or "updated_at" not in session_data:
+            return response
+
         last_updated = datetime.now().timestamp() - float(session_data["updated_at"])
         if last_updated > REFRESH_THRESHOLD.total_seconds():
             _update_cp_session(session_id)
