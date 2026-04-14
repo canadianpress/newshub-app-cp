@@ -8,8 +8,6 @@ config.entry.home_js = [
 ];
 config.entry.firebase_login_js = "./assets/auth/firebase/login.ts";
 
-require("dotenv").config();
-
 config.plugins = [
   ...(config.plugins || []),
   new webpack.DefinePlugin({
