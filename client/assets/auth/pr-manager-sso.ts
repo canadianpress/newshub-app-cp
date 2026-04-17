@@ -1,20 +1,12 @@
-import { signInWithCustomToken } from "firebase/auth";
-import { auth } from "newsroom-core/assets/auth/firebase/init";
 import { getConfig } from "newsroom-core/assets/utils";
 import { login } from "./auth0";
 
 const handlePrManagerClick = (event: Event) => {
   event.preventDefault();
   fetch("/firebase_credentials")
-    .then((r) => r.json())
-    .then(({ token }) => signInWithCustomToken(auth, token))
-    .then((userCredential) =>
-      userCredential.user
-        .getIdToken()
-        .then((token) => ({ email: userCredential.user.email, token })),
-    )
-    .then(({ email, token }) => login(email, token))
-    .catch(() => login(null, null));
+    .then((r) => (r.ok ? process.env.AUTH0_FIREBASE_CONNECTION : undefined))
+    .then(login)
+    .catch(login);
 };
 
 const prManagerObserver = new MutationObserver((_, observer) => {
