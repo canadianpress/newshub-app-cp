@@ -9,10 +9,10 @@ let auth0Client: Auth0Client;
 async function initAuth0() {
   try {
     auth0Client = await createAuth0Client({
-      domain: "cpe-stage.ca.auth0.com",
-      clientId: "TDNfUa1qEqpm51LCFdNI6ryiihYJ40Y9",
+      domain: process.env.AUTH0_DOMAIN,
+      clientId: process.env.AUTH0_CLIENT_ID,
       authorizationParams: {
-        redirect_uri: "https://stgadmin.prgloo.com/cp",
+        redirect_uri: process.env.AUTH0_REDIRECT_URI,
       },
     });
 
