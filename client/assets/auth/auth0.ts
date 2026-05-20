@@ -35,7 +35,7 @@ async function handleRedirectCallback() {
 async function login(connection?: string) {
   try {
     return await auth0Client.loginWithRedirect({
-      authorizationParams: { prompt: "login", connection },
+      authorizationParams: { connection },
     });
   } catch (err) {
     console.error(err);
