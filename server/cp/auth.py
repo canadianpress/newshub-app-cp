@@ -39,9 +39,15 @@ logger.setLevel(INFO)
 firebase_app = initialize_firebase_app(
     credential=FirebaseCertificate(environ.get("FIREBASE_CONFIG"))
 )
+
+oidc_key = (
+    open(environ["CP_OIDC_JWK"], "r", encoding="utf-8").read()
+    if environ.get("CP_OIDC_JWK") 
+    else None
+)
 oidc_signing_key = (
-    jwk.JWK.from_json(environ["CP_OIDC_PRIVATE_JWK"])
-    if environ.get("CP_OIDC_PRIVATE_JWK")
+    jwk.JWK.from_json(oidc_key)
+    if oidc_key
     else None
 )
 if oidc_signing_key is None:
