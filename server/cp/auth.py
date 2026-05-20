@@ -96,7 +96,7 @@ def get_id_token_from_session(args, params, request: Request):
     if not session_data:
         return {"error": "Invalid Session"}, 401
 
-    return None, 200
+    return {}, 200
 
 
 def _get_cp_session_cookie(request: Request):
