@@ -456,3 +456,4 @@ MAX_CONTENT_LENGTH = int(
 )  # 4GB
 
 CLIENT_CONFIG["prManagerSidenavEnabled"] = PR_MANAGER_SIDENAV_ENABLED
+SENTRY_LOADER_SRC = os.environ.get("SENTRY_LOADER_SRC", "")
