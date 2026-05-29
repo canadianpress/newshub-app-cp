@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from logging import INFO, getLogger
 from os import environ
 from pathlib import Path
+from secrets import compare_digest
 from time import time
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -33,7 +34,8 @@ OIDC_ACCESS_TOKEN_EXPIRY = timedelta(minutes=15)
 OIDC_ID_TOKEN_EXPIRY = timedelta(minutes=5)
 OIDC_SCOPES = {"openid", "profile", "email"}
 OIDC_JWK = environ.get("CP_OIDC_JWK")
-
+OIDC_CLIENT_ID = environ.get("CP_OIDC_CLIENT_ID")
+OIDC_CLIENT_SECRET = environ.get("CP_OIDC_CLIENT_SECRET")
 if not OIDC_JWK:
     raise Exception("CP_OIDC_JWK environment variable must be set for OIDC support")
 
@@ -343,21 +345,25 @@ def _get_oidc_issuer(request: Request) -> str:
 
 
 def _is_oidc_client_allowed(client_id: str | None) -> bool:
-    expected_client_id = environ.get("CP_OIDC_CLIENT_ID")
-    return not expected_client_id or client_id == expected_client_id
+    if not OIDC_CLIENT_ID or not client_id:
+        return False
+    return compare_digest(client_id, OIDC_CLIENT_ID)
 
 
 def _is_oidc_client_authenticated(
     client_id: str | None, client_secret: str | None
 ) -> bool:
-    expected_client_id = environ.get("CP_OIDC_CLIENT_ID")
-    expected_client_secret = environ.get("CP_OIDC_CLIENT_SECRET")
+    if (
+        not OIDC_CLIENT_ID
+        or not OIDC_CLIENT_SECRET
+        or not client_id
+        or not client_secret
+    ):
+        return False
 
-    if expected_client_id and client_id != expected_client_id:
-        return False
-    if expected_client_secret and client_secret != expected_client_secret:
-        return False
-    return True
+    id_matches = compare_digest(client_id, OIDC_CLIENT_ID)
+    secret_matches = compare_digest(client_secret, OIDC_CLIENT_SECRET)
+    return id_matches and secret_matches
 
 
 def _parse_basic_auth(request: Request) -> tuple[str | None, str | None]:
