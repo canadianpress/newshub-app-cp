@@ -36,16 +36,19 @@ OIDC_SCOPES = {"openid", "profile", "email"}
 OIDC_JWK = environ.get("CP_OIDC_JWK")
 OIDC_CLIENT_ID = environ.get("CP_OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = environ.get("CP_OIDC_CLIENT_SECRET")
+OIDC_ISSUER = environ.get("CP_OIDC_ISSUER")
+FIREBASE_CONFIG = environ.get("FIREBASE_CONFIG")
+
 if not OIDC_JWK:
-    raise Exception("CP_OIDC_JWK environment variable must be set for OIDC support")
+    raise Exception("CP_OIDC_JWK environment variable must be set")
+if not FIREBASE_CONFIG:
+    raise Exception("FIREBASE_CONFIG environment variable must be set")
 
 blueprint = EndpointGroup("cp_auth", __name__)
 logger = getLogger(__name__)
 logger.setLevel(INFO)
 
-firebase_app = initialize_firebase_app(
-    credential=FirebaseCertificate(environ.get("FIREBASE_CONFIG"))
-)
+firebase_app = initialize_firebase_app(credential=FirebaseCertificate(FIREBASE_CONFIG))
 
 oidc_key = Path(OIDC_JWK).read_text()
 oidc_signing_key = JWK.from_json(oidc_key)
@@ -341,7 +344,7 @@ def _get_oidc_access_token_data(token: str) -> dict[str, str | int | bool] | Non
 
 
 def _get_oidc_issuer(request: Request) -> str:
-    return environ.get("CP_OIDC_ISSUER") or request.url.rsplit("/oidc/", 1)[0]
+    return OIDC_ISSUER or request.url.rsplit("/oidc/", 1)[0]
 
 
 def _is_oidc_client_allowed(client_id: str | None) -> bool:
