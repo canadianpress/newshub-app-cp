@@ -1,6 +1,6 @@
-import json
 from base64 import b64decode
 from datetime import datetime, timedelta
+from json import dumps, loads
 from logging import INFO, getLogger
 from os import environ
 from pathlib import Path
@@ -10,8 +10,8 @@ from urllib.parse import urlencode
 from uuid import uuid4
 
 from authlib.jose import jwt
-from firebase_admin import auth
 from firebase_admin import initialize_app as initialize_firebase_app
+from firebase_admin.auth import verify_id_token
 from firebase_admin.credentials import Certificate as FirebaseCertificate
 from flask import Response
 from jwcrypto.jwk import JWK
@@ -59,7 +59,7 @@ async def firebase_auth_token(args, params, request: Request):
         return request.redirect(url_for("auth.login", token_error=1))
 
     try:
-        claims = auth.verify_id_token(token, firebase_app)
+        claims = verify_id_token(token, firebase_app)
     except Exception as e:
         logger.error(f"Failed to verify token: {e}")
         await flash(gettext("User token is not valid"), "danger")
@@ -171,7 +171,7 @@ def oidc_openid_configuration(args, params, request: Request):
 
 @blueprint.endpoint("/oidc/jwks.json", auth=False)
 def oidc_jwks(args, params, request: Request):
-    return {"keys": [json.loads(oidc_signing_key.export_public())]}, 200
+    return {"keys": [loads(oidc_signing_key.export_public())]}, 200
 
 
 @blueprint.endpoint("/oidc/authorize", methods=["GET"], auth=False)
@@ -326,7 +326,7 @@ def _pop_oidc_authorization_code(code: str | None) -> dict[str, str] | None:
 
 def _store_oidc_access_token(token: str, claims: dict[str, str | int | bool]) -> None:
     key = _get_oidc_redis_key("access_token", token)
-    mapping = {k: json.dumps(v) for k, v in claims.items()}
+    mapping = {k: dumps(v) for k, v in claims.items()}
     _get_redis().pipeline().hset(key, mapping=mapping).expire(
         key, int(OIDC_ACCESS_TOKEN_EXPIRY.total_seconds())
     ).execute()
@@ -337,7 +337,7 @@ def _get_oidc_access_token_data(token: str) -> dict[str, str | int | bool] | Non
     if not value:
         return None
 
-    return {k.decode("utf-8"): json.loads(v.decode("utf-8")) for k, v in value.items()}
+    return {k.decode("utf-8"): loads(v.decode("utf-8")) for k, v in value.items()}
 
 
 def _get_oidc_issuer(request: Request) -> str:
@@ -444,7 +444,7 @@ def _oidc_redirect_error(
 
 def _oidc_json_response(data: dict[str, object], status: int = 200) -> Response:
     return Response(
-        json.dumps(data),
+        dumps(data),
         status=status,
         mimetype="application/json",
         headers={"Cache-Control": "no-store", "Pragma": "no-cache"},
