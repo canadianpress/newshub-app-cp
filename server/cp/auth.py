@@ -86,15 +86,15 @@ async def firebase_auth_token(args, params, request: Request):
     return response
 
 
-@blueprint.endpoint("/firebase_credentials")
-def get_id_token_from_session(args, params, request: Request):
+@blueprint.endpoint("/cp_session")
+def session_status(args, params, request: Request):
     session_id = _get_cp_session_cookie(request)
     if not session_id:
-        return {"error": "No session found"}, 401
+        return {}, 401
 
     session_data = _get_valid_cp_session_data(session_id)
     if not session_data:
-        return {"error": "Invalid Session"}, 401
+        return {}, 401
 
     return {}, 200
 
