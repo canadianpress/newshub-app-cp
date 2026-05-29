@@ -37,6 +37,9 @@ OIDC_JWK = environ.get("CP_OIDC_JWK")
 OIDC_CLIENT_ID = environ.get("CP_OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = environ.get("CP_OIDC_CLIENT_SECRET")
 OIDC_ISSUER = environ.get("CP_OIDC_ISSUER")
+OIDC_REDIRECT_URI_LIST = {
+    uri for uri in environ.get("CP_OIDC_REDIRECT_URI_LIST", "").split(",") if uri
+}
 FIREBASE_CONFIG = environ.get("FIREBASE_CONFIG")
 
 if not OIDC_JWK:
@@ -202,6 +205,14 @@ def oidc_authorize(args, params, request: Request):
     if not _is_oidc_client_allowed(client_id):
         return _oidc_redirect_error(redirect_uri, "unauthorized_client", state=state)
 
+    if not _is_redirect_uri_allowed(redirect_uri):
+        return _oidc_redirect_error(
+            redirect_uri,
+            "invalid_redirect_uri",
+            "redirect uri is not allowed",
+            state=state,
+        )
+
     session_id = _get_cp_session_cookie(request)
     session_data = _get_valid_cp_session_data(session_id)
     if not session_id or not session_data:
@@ -351,6 +362,10 @@ def _is_oidc_client_allowed(client_id: str | None) -> bool:
     if not OIDC_CLIENT_ID or not client_id:
         return False
     return compare_digest(client_id, OIDC_CLIENT_ID)
+
+
+def _is_redirect_uri_allowed(redirect_uri: str | None) -> bool:
+    return redirect_uri in OIDC_REDIRECT_URI_LIST
 
 
 def _is_oidc_client_authenticated(
