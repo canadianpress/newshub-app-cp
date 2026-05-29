@@ -3,6 +3,7 @@ from base64 import b64decode
 from datetime import datetime, timedelta
 from logging import INFO, getLogger
 from os import environ
+from pathlib import Path
 from time import time
 from urllib.parse import urlencode
 from uuid import uuid4
@@ -12,7 +13,7 @@ from firebase_admin import auth
 from firebase_admin import initialize_app as initialize_firebase_app
 from firebase_admin.credentials import Certificate as FirebaseCertificate
 from flask import Response
-from jwcrypto import jwk
+from jwcrypto.jwk import JWK
 from newsroom.auth.utils import get_current_request, sign_user_by_email
 from newsroom.flask import flash
 from newsroom.types import AuthProviderType
@@ -31,6 +32,10 @@ OIDC_AUTH_CODE_EXPIRY = timedelta(minutes=2)
 OIDC_ACCESS_TOKEN_EXPIRY = timedelta(minutes=15)
 OIDC_ID_TOKEN_EXPIRY = timedelta(minutes=5)
 OIDC_SCOPES = {"openid", "profile", "email"}
+OIDC_JWK = environ.get("CP_OIDC_JWK")
+
+if not OIDC_JWK:
+    raise Exception("CP_OIDC_JWK environment variable must be set for OIDC support")
 
 blueprint = EndpointGroup("cp_auth", __name__)
 logger = getLogger(__name__)
@@ -40,19 +45,8 @@ firebase_app = initialize_firebase_app(
     credential=FirebaseCertificate(environ.get("FIREBASE_CONFIG"))
 )
 
-oidc_key = (
-    open(environ["CP_OIDC_JWK"], "r", encoding="utf-8").read()
-    if environ.get("CP_OIDC_JWK") 
-    else None
-)
-oidc_signing_key = (
-    jwk.JWK.from_json(oidc_key)
-    if oidc_key
-    else None
-)
-if oidc_signing_key is None:
-    oidc_signing_key = jwk.JWK.generate(kty="RSA", size=2048)
-    oidc_signing_key["kid"] = str(uuid4())
+oidc_key = Path(OIDC_JWK).read_text()
+oidc_signing_key = JWK.from_json(oidc_key)
 
 
 @blueprint.endpoint("/firebase_auth_token", auth=False)
