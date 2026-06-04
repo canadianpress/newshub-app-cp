@@ -194,6 +194,11 @@ def oidc_authorize(args, params, request: Request):
             "error": "invalid_request",
             "error_description": "redirect_uri is required",
         }, 400
+    if not _is_redirect_uri_allowed(redirect_uri):
+        return {
+            "error": "invalid_redirect_uri",
+            "error_description": "redirect uri is not allowed",
+        }, 400
     if response_type != "code":
         return _oidc_redirect_error(
             redirect_uri, "unsupported_response_type", state=state
@@ -204,14 +209,6 @@ def oidc_authorize(args, params, request: Request):
         )
     if not _is_oidc_client_allowed(client_id):
         return _oidc_redirect_error(redirect_uri, "unauthorized_client", state=state)
-
-    if not _is_redirect_uri_allowed(redirect_uri):
-        return _oidc_redirect_error(
-            redirect_uri,
-            "invalid_redirect_uri",
-            "redirect uri is not allowed",
-            state=state,
-        )
 
     session_id = _get_cp_session_cookie(request)
     session_data = _get_valid_cp_session_data(session_id)
