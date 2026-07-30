@@ -454,6 +454,7 @@ configure_nginx() {
     fi
 
     sudo systemctl enable nginx
+    sudo systemctl reload-or-restart nginx
 }
 
 configure_logrotate() {
