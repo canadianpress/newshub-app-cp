@@ -85,7 +85,7 @@ celerybeatschedule.db*
 *.sage.py
 
 # dotenv
-.env
+*.env
 
 # virtualenv
 .venv
