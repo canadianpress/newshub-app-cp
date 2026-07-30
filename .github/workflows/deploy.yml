@@ -87,10 +87,10 @@ jobs:
                 chmod 600 "$TARGET_DIR/deploy/deploy.env"
 
                 cd "$TARGET_DIR/deploy/hosts"
-                sudo ./setup-cms-system.sh
+                sudo ./setup-newsroom-system.sh
 
                 cd "$TARGET_DIR/deploy/services"
-                ./cms.sh
+                ./newsroom.sh
               '
 
           EOF
