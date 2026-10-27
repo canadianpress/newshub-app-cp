@@ -51,10 +51,11 @@ jobs:
 
             export AWS_DEFAULT_REGION="$AWS_REGION"
 
-            touch /var/lock/newsroom-deploy.lock
-            chown "root:\$(id -gn '$TARGET_USER')" /var/lock/newsroom-deploy.lock
-            chmod 660 /var/lock/newsroom-deploy.lock
-            exec 8>>/var/lock/newsroom-deploy.lock
+            LOCK_FILE="/var/lock/newsroom-deploy.lock"
+            touch "\$LOCK_FILE"
+            chown "root:\$(id -gn '$TARGET_USER')" "\$LOCK_FILE"
+            chmod 660 "\$LOCK_FILE"
+            exec 8>>"\$LOCK_FILE"
             flock -w 300 8 || { echo "Timed out waiting for another host deployment"; exit 1; }
 
             mkdir -p "$TARGET_DIR"
@@ -66,6 +67,11 @@ jobs:
             fi
 
             runuser -u "$TARGET_USER" -- env \
+              HOME="/home/$TARGET_USER" \
+              USER="$TARGET_USER" \
+              LOGNAME="$TARGET_USER" \
+              XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" \
+              DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
               TARGET_DIR="$TARGET_DIR" \
               REPO_URL="$REPO_URL" \
               REPO_REF="$REPO_REF" \
@@ -81,13 +87,30 @@ jobs:
                 if [ -d "$TARGET_DIR/.git" ]; then
                   echo "Updating existing repository at $TARGET_DIR..."
                   cd "$TARGET_DIR"
-                  git fetch origin
-                  git checkout "$REPO_REF"
-                  git reset --hard "origin/$REPO_REF"
+                  git fetch --prune --tags --force origin
+                  if git rev-parse -q --verify "refs/tags/${REPO_REF}" >/dev/null; then
+                    echo "Checking out tag ${REPO_REF}"
+                    git checkout "refs/tags/${REPO_REF}"
+                  elif git rev-parse -q --verify "refs/remotes/origin/${REPO_REF}" >/dev/null; then
+                    echo "Checking out branch ${REPO_REF}"
+                    git checkout -B "$REPO_REF" "origin/$REPO_REF" || git checkout "$REPO_REF"
+                    git reset --hard "origin/$REPO_REF"
+                  else
+                    echo "Checking out ${REPO_REF}"
+                    git checkout "$REPO_REF" || git checkout -B "$REPO_REF" "origin/$REPO_REF"
+                  fi
                 else
                   echo "Cloning new repository into $TARGET_DIR..."
-                  git clone -b "$REPO_REF" "$REPO_URL" "$TARGET_DIR"
+                  git clone "$REPO_URL" "$TARGET_DIR"
                   cd "$TARGET_DIR"
+                  git fetch --prune --tags --force origin
+                  if git rev-parse -q --verify "refs/tags/${REPO_REF}" >/dev/null; then
+                    git checkout "refs/tags/${REPO_REF}"
+                  elif git rev-parse -q --verify "refs/remotes/origin/${REPO_REF}" >/dev/null; then
+                    git checkout -B "$REPO_REF" "origin/$REPO_REF"
+                  else
+                    git checkout "$REPO_REF"
+                  fi
                 fi
 
                 echo "Current HEAD"

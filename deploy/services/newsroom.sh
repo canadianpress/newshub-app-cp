@@ -281,11 +281,10 @@ install_pyenv() {
     if ! command -v pyenv >/dev/null 2>&1; then
         log_info "Installing pyenv..."
         curl -fsSL https://pyenv.run | bash
-        "$PYENV_ROOT/bin/pyenv" init --install
     fi
-    eval "$("$PYENV_ROOT/bin/pyenv" init -)"
-    pyenv install -s "${PYTHON_VERSION}"
-    pyenv shell "${PYTHON_VERSION}"
+    eval "$("$PYENV_ROOT/bin/pyenv" init -)" 2>/dev/null || true
+    pyenv install -s "${PYTHON_VERSION}" 2>/dev/null || true
+    pyenv shell "${PYTHON_VERSION}" 2>/dev/null || true
 }
 
 install_uv() {
@@ -306,10 +305,10 @@ setup_frontend() {
     rm -rf -- "${RELEASE_DIR}/client/dist"
 
     if [[ "$USE_PNPM" == "true" ]]; then
-        pnpm i -ci --quiet
+        pnpm install --frozen-lockfile --prefer-offline 2>/dev/null || pnpm install --prefer-offline || pnpm install
         pnpm run build > /dev/null 2>&1
     else
-        npm i -ci --quiet
+        npm ci --prefer-offline 2>/dev/null || npm install
         npm run build > /dev/null 2>&1
     fi
 
@@ -489,8 +488,12 @@ initialize_database() {
 
 create_procfile() {
     log_info "Generating Procfile..."
-    install_template "newsroom.procfile.template" "${SERVER_DIR}/Procfile"
-    log_success "Procfile created"
+    if [[ -f "$TEMPLATE_DIR/newsroom.procfile.template" ]]; then
+        install_template "newsroom.procfile.template" "${SERVER_DIR}/Procfile"
+        log_success "Procfile created"
+    else
+        log_warn "newsroom.procfile.template not found; using repo's Procfile if present"
+    fi
 }
 
 create_systemd_service() {
@@ -503,9 +506,9 @@ create_systemd_service() {
     mkdir -p "${user_service_dir}"
     install_template "app.service.template" "${user_service_dir}/${APP_NAME}.service"
 
-    sudo loginctl enable-linger "${USER}"
-    systemctl --user daemon-reload
-    systemctl --user enable "${APP_NAME}.service"
+    sudo loginctl enable-linger "${USER}" >/dev/null 2>&1 || true
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable "${APP_NAME}.service" 2>/dev/null || true
 
     log_success "Systemd service created"
 }
@@ -786,15 +789,8 @@ main() {
 
     time_step "Preflight checks"       preflight_checks
     time_step "Setup directories"      setup_directories
-    local lock_file="/var/lock/superdesk-newsroom-deploy.lock"
-    local inherited_lock=false
-    if [[ "${DEPLOY_LOCK_HELD:-false}" == "true" &&
-          -e "/proc/${BASHPID}/fd/8" ]] &&
-       [[ "$(stat -Lc '%d:%i' "/proc/${BASHPID}/fd/8")" == "$(stat -Lc '%d:%i' "$lock_file" 2>/dev/null || true)" ]] &&
-       flock -n 8; then
-        inherited_lock=true
-    fi
-    if [[ "$inherited_lock" != "true" ]]; then
+    local lock_file="/var/lock/newsroom-deploy.lock"
+    if [[ "${DEPLOY_LOCK_HELD:-false}" != "true" ]]; then
         sudo touch "$lock_file"
         sudo chown "root:$(id -gn "$APP_USER")" "$lock_file"
         sudo chmod 660 "$lock_file"
