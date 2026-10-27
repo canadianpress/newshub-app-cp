@@ -768,7 +768,7 @@ show_status() {
     echo ""
     log_success "Deployment complete!"
     echo ""
-    log_info "Ports: API=$WEB_PORT WS=$WS_PORT CAPI=$CAPI_PORT PAPI=$PAPI_PORT | Ref: ${REPO_REF} @ $(git -C "$RELEASE_DIR" rev-parse --short HEAD)"
+    log_info "Ports: API=$WEB_PORT WS=$WS_PORT | Ref: ${REPO_REF} @ $(git -C "$RELEASE_DIR" rev-parse --short HEAD)"
     echo ""
     systemctl --user status "${APP_NAME}.service" --no-pager --lines=0 || true
     echo ""
