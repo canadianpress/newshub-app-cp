@@ -2,7 +2,7 @@
 #
 # System Setup Script for Newsroom CMS
 # Ubuntu 22.04 LTS (Jammy Jellyfish)
-# Run as: sudo ./setup-cms-system.sh
+# Run as: sudo ./setup-newsroom-system.sh
 
 set -euo pipefail
 
