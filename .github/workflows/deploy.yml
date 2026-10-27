@@ -70,8 +70,8 @@ jobs:
               HOME="/home/$TARGET_USER" \
               USER="$TARGET_USER" \
               LOGNAME="$TARGET_USER" \
-              XDG_RUNTIME_DIR="/run/user/$(id -u "$TARGET_USER")" \
-              DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$TARGET_USER")/bus" \
+              XDG_RUNTIME_DIR="/run/user/\$(id -u "$TARGET_USER")" \
+              DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/\$(id -u "$TARGET_USER")/bus" \
               TARGET_DIR="$TARGET_DIR" \
               REPO_URL="$REPO_URL" \
               REPO_REF="$REPO_REF" \
